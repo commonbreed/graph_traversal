@@ -64,8 +64,9 @@ void insert_node(struct node *before, struct node *new) {
 		n_tmp->prev = new;
 		new->next = n_tmp;
 		n_tmp->refc++;
+		new->refc++;
 	}
-	new->refc += 2;
+	new->refc++;
 	before->refc++;
 }
 
