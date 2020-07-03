@@ -63,8 +63,9 @@ void insert_node(struct node *before, struct node *new) {
 	if(n_tmp) {
 		n_tmp->prev = new;
 		new->next = n_tmp;
+		n_tmp->refc++;
 	}
-	new->refc++;
+	new->refc += 2;
 	before->refc++;
 }
 
