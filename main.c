@@ -1,9 +1,9 @@
 #define TDIR_NEXT 1
 #define TDIR_PREV 2
 
-#define TDEBUGINFO "[DEBUGINFO] "
-#define TWARNING   "[WARN] "
-#define TERROR     "[ERROR] "
+#define TDEBUGINFO L"[DEBUGINFO] "
+#define TWARNING   L"[WARN] "
+#define TERROR     L"[ERROR] "
 
 #ifdef TDEBUG
 #define INSERT_NODE_D(n) insert_node_d(n) 
@@ -23,6 +23,10 @@ static struct node *origin_node_d = 0;
 #define INSERT_NODE(b, n)  insert_node(b, n); \
 		  	   INSERT_NODE_D(n)
 
+#define WCHARWRITE(ADDR, UCODE)     snprintf(ADDR, 2, "\u" #UCODE)
+#define WNCHARWRITE(ADDR, UCODE, N) for(int _i = 0; _i < N; _i+=2) WCHARWRITE(ADDR+_i, UCODE)
+#define WNSTRWRITE(ADDR, FMT, DATA, N) snprintf(ADDR, N, FMT, DATA)
+
 #define SFMTGRN "\x1B[32m"
 #define SFMTBLU "\x1B[34m"
 #define SFMTRST "\x1B[0m"
@@ -30,6 +34,14 @@ static struct node *origin_node_d = 0;
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <memory.h>
+#include <locale.h>
+#include <wchar.h>
+#include <signal.h>
+
+#include "litmus/litmus_unicode.h"
+#include "util/box_drawing.h"
 
 struct node {
 	uint32_t data;
@@ -40,16 +52,16 @@ struct node {
 
 void traverse_graph_fwd(struct node *start) {
 	do {
-		printf("%d", start->data);
+		wprintf(L"%d", start->data);
 		start = start->next;
 	} while(start);
-	printf("\n");
+	wprintf(L"\n");
 }	
 
 #ifdef TDEBUG
 void insert_node_d(struct node *new) {
 	if(!origin_node_d) {
-		fprintf(stderr, TERROR TDEBUGINFO "Origin node was not set before INSERT_NODE macro\n");
+		wprintf(TERROR TDEBUGINFO L"Origin node was not set before INSERT_NODE macro\n");
 		exit(-1);
 	}
 	_show_refs(new, origin_node_d);
@@ -74,21 +86,22 @@ void _show_refs(struct node *n, struct node *orig) {
 	int refs = 0;
 	// Traverse nodes forward from origin, to find where nodes reference the node n
 	// Note that this function can only find transitive references for the given graph
-	printf("\n---Showing reference trace for node containing data: %zu---\n", (size_t)n->data);
+	wprintf(L"\n---Showing reference trace for node containing data: %zu---\n", (size_t)n->data);
+	wprintf("\tThis node self-reports %d inbound reference(s).\n", n->refc);
 	do {
 		if(orig->next == n) {
-			printf(TDEBUGINFO SFMTGRN "%p (%zu)" SFMTRST " precedes " SFMTBLU "%p (%zu)" SFMTRST "\n", (void *)orig, (size_t)orig->data, (void *)n, (size_t)n->data);
+			wprintf("\t" TDEBUGINFO SFMTGRN "%p (%zu)" SFMTRST " precedes " SFMTBLU "%p (%zu)" SFMTRST "\n", (void *)orig, (size_t)orig->data, (void *)n, (size_t)n->data);
 			refs++;
 		}
 		if(orig->prev == n) {
-			printf(TDEBUGINFO SFMTGRN "%p (%zu)" SFMTRST " succeeds " SFMTBLU "%p (%zu)" SFMTRST "\n", (void *)orig, (size_t)orig->data, (void *)n, (size_t)n->data);
+			wprintf("\t" TDEBUGINFO SFMTGRN "%p (%zu)" SFMTRST " succeeds " SFMTBLU "%p (%zu)" SFMTRST "\n", (void *)orig, (size_t)orig->data, (void *)n, (size_t)n->data);
 			refs++;
 		}
 		orig = orig->next;
 	} while(orig);
 
 	if(!refs) {
-		printf("\tNo refs yet; first node in graph?\n");
+		wprintf("\tNo refs yet; first node in graph?\n");
 	}
 }
 
@@ -107,12 +120,50 @@ void remove_node(struct node *n) {
 
 void _delete_node(struct node *n) {
 	if(n->refc) {
-		fprintf(stderr, "[NT][WARN] Trying to delete node with non-zero reference count\n");
+		wprintf(L"[NT][WARN] Trying to delete node with non-zero reference count\n");
 	}
 	// This is just a helper to ensure that if a heap-based node need be deleted, we first verify that ref count is non-zero
 }
 
+char *_string_builder() {
+
+}
+
+// Wraps the data inside a node in an ASCII "circle"
+wchar_t *_wrap_data_ascii(struct node *n) {
+	int cidx = 0;
+#define WINSERT(val) so[cidx] = val; cidx++
+#define WNFILL(val) for(int _i = 0; _i < nlens; _i++)\
+				so[cidx+_i] = val;\
+				cidx+=nlens
+#define WSTRINSERT() cidx+=swprintf(&so[cidx], nlens, L"%zu", (size_t)n->data)
+	wchar_t s[10], so[100] = {0};
+	swprintf(s, 10, L"%zu", (size_t)n->data);
+	size_t nlens = wcslen(s);
+	
+	WINSERT(GT_BD_TOPLEFT); 	// Top-left light box-drawing
+	WNFILL(GT_BD_HORIZONTAL);	// Horizontal light box-drawing
+	WINSERT(GT_BD_TOPRIGHT);
+	WINSERT(L'\n');
+	WINSERT(GT_BD_VERTICAL); // Vertical light box-drawing
+	
+	// Insert data
+	WSTRINSERT();
+
+	WINSERT(GT_BD_VERTICAL);
+	WINSERT(L'\n');
+	WINSERT(GT_BD_BOTTOMLEFT);
+	WNFILL(GT_BD_HORIZONTAL);
+	WINSERT(GT_BD_BOTTOMRIGHT);
+	WINSERT(L'\n');
+
+	raise(SIGTRAP);
+	wprintf(L"%ls", so);
+	return so;
+}
+
 int main() {
+	setlocale(LC_CTYPE, "");
 	struct node first = {
 		.data = 1 };
 	struct node second = {
@@ -127,12 +178,12 @@ int main() {
 	SET_ORIGIN(&first);
 
 	INSERT_ORIGIN();
+	INSERT_NODE(&first, &fifth);
+	INSERT_NODE(&first, &fourth);
 	INSERT_NODE(&first, &third);
 	INSERT_NODE(&first, &second);
-	INSERT_NODE(&third, &fourth);
-	INSERT_NODE(&fourth, &fifth);
 
 	traverse_graph_fwd(&first);
-
+	_wrap_data_ascii(&first);
 	return 0;
 }
