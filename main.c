@@ -27,9 +27,9 @@ static struct node *origin_node_d = 0;
 #define WNCHARWRITE(ADDR, UCODE, N) for(int _i = 0; _i < N; _i+=2) WCHARWRITE(ADDR+_i, UCODE)
 #define WNSTRWRITE(ADDR, FMT, DATA, N) snprintf(ADDR, N, FMT, DATA)
 
-#define SFMTGRN "\x1B[32m"
-#define SFMTBLU "\x1B[34m"
-#define SFMTRST "\x1B[0m"
+#define SFMTGRN L"\x1B[32m"
+#define SFMTBLU L"\x1B[34m"
+#define SFMTRST L"\x1B[0m"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -87,21 +87,21 @@ void _show_refs(struct node *n, struct node *orig) {
 	// Traverse nodes forward from origin, to find where nodes reference the node n
 	// Note that this function can only find transitive references for the given graph
 	wprintf(L"\n---Showing reference trace for node containing data: %zu---\n", (size_t)n->data);
-	wprintf("\tThis node self-reports %d inbound reference(s).\n", n->refc);
+	wprintf(L"\tThis node self-reports %d inbound reference(s).\n", n->refc);
 	do {
 		if(orig->next == n) {
-			wprintf("\t" TDEBUGINFO SFMTGRN "%p (%zu)" SFMTRST " precedes " SFMTBLU "%p (%zu)" SFMTRST "\n", (void *)orig, (size_t)orig->data, (void *)n, (size_t)n->data);
+			wprintf(L"\t" TDEBUGINFO SFMTGRN "%p (%zu)" SFMTRST " precedes " SFMTBLU "%p (%zu)" SFMTRST "\n", (void *)orig, (size_t)orig->data, (void *)n, (size_t)n->data);
 			refs++;
 		}
 		if(orig->prev == n) {
-			wprintf("\t" TDEBUGINFO SFMTGRN "%p (%zu)" SFMTRST " succeeds " SFMTBLU "%p (%zu)" SFMTRST "\n", (void *)orig, (size_t)orig->data, (void *)n, (size_t)n->data);
+			wprintf(L"\t" TDEBUGINFO SFMTGRN "%p (%zu)" SFMTRST " succeeds " SFMTBLU "%p (%zu)" SFMTRST "\n", (void *)orig, (size_t)orig->data, (void *)n, (size_t)n->data);
 			refs++;
 		}
 		orig = orig->next;
 	} while(orig);
 
 	if(!refs) {
-		wprintf("\tNo refs yet; first node in graph?\n");
+		wprintf(L"\tNo refs yet; first node in graph?\n");
 	}
 }
 
@@ -136,7 +136,7 @@ wchar_t *_wrap_data_ascii(struct node *n) {
 #define WNFILL(val) for(int _i = 0; _i < nlens; _i++)\
 				so[cidx+_i] = val;\
 				cidx+=nlens
-#define WSTRINSERT() cidx+=swprintf(&so[cidx], nlens, L"%zu", (size_t)n->data)
+#define WSTRINSERT() cidx+=swprintf(&so[cidx], nlens+1, L"%zu", (size_t)n->data)
 	wchar_t s[10], so[100] = {0};
 	swprintf(s, 10, L"%zu", (size_t)n->data);
 	size_t nlens = wcslen(s);
@@ -157,7 +157,7 @@ wchar_t *_wrap_data_ascii(struct node *n) {
 	WINSERT(GT_BD_BOTTOMRIGHT);
 	WINSERT(L'\n');
 
-	raise(SIGTRAP);
+//raise(SIGTRAP);
 	wprintf(L"%ls", so);
 	return so;
 }
