@@ -1,5 +1,9 @@
 #include "ncurses_util/drawing.h"
 
+#include <locale.h>
+#include <ncurses.h>
+#include <termios.h>
+
 int __init_ncurses() {
 	setlocale(LC_CTYPE, "");
 	initscr(); // General init
@@ -7,7 +11,7 @@ int __init_ncurses() {
 	noecho();  // Don't relay typed characters
 
 	// Use termios to re-enable automatic carriage returns
-	// This is an alternative to using -DONLCR when compling ncurses
+	// This is an alternative to using -DONLCR when compiling ncurses
 	struct termios settings;
 
 	tcgetattr(0, &settings);
