@@ -7,7 +7,7 @@ int __init_ncurses() {
 	noecho();  // Don't relay typed characters
 
 	// Use termios to re-enable automatic carriage returns
-	// This places ncurses in an unstable state, so revisit this and make sure nothing weird happens FIXME
+	// This is an alternative to using -DONLCR when compling ncurses
 	struct termios settings;
 
 	tcgetattr(0, &settings);
