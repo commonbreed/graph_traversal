@@ -30,6 +30,7 @@ static struct node *origin_node_d = 0;
 #define SFMTGRN L"\x1B[32m"
 #define SFMTBLU L"\x1B[34m"
 #define SFMTRST L"\x1B[0m"
+#define GT_ARROW_RIGHT L"-->"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -42,6 +43,7 @@ static struct node *origin_node_d = 0;
 
 #include "litmus/litmus_unicode.h"
 #include "util/box_drawing.h"
+#include "ncurses_util/drawing.h"
 
 struct node {
 	uint32_t data;
@@ -50,9 +52,11 @@ struct node {
 	int refc;
 };
 
+wchar_t *_wrap_data_ascii(struct node *n, int arrow);
+
 void traverse_graph_fwd(struct node *start) {
 	do {
-		wprintf(L"%d", start->data);
+		_wrap_data_ascii(start, (int)start->next);
 		start = start->next;
 	} while(start);
 	wprintf(L"\n");
@@ -130,7 +134,7 @@ char *_string_builder() {
 }
 
 // Wraps the data inside a node in an ASCII "circle"
-wchar_t *_wrap_data_ascii(struct node *n) {
+wchar_t *_wrap_data_ascii(struct node *n, int arrow) {
 	int cidx = 0;
 #define WINSERT(val) so[cidx] = val; cidx++
 #define WNFILL(val) for(int _i = 0; _i < nlens; _i++)\
@@ -151,11 +155,15 @@ wchar_t *_wrap_data_ascii(struct node *n) {
 	WSTRINSERT();
 
 	WINSERT(GT_BD_VERTICAL);
+	if(arrow) {
+		WINSERT(L'-');
+		WINSERT(L'-');
+		WINSERT(L'>');
+	}
 	WINSERT(L'\n');
 	WINSERT(GT_BD_BOTTOMLEFT);
 	WNFILL(GT_BD_HORIZONTAL);
 	WINSERT(GT_BD_BOTTOMRIGHT);
-	WINSERT(L'\n');
 
 //raise(SIGTRAP);
 	wprintf(L"%ls", so);
@@ -163,7 +171,7 @@ wchar_t *_wrap_data_ascii(struct node *n) {
 }
 
 int main() {
-	setlocale(LC_CTYPE, "");
+	__init_ncurses();
 	struct node first = {
 		.data = 1 };
 	struct node second = {
@@ -171,7 +179,7 @@ int main() {
 	struct node third = {
 		.data = 3 };
 	struct node fourth = {
-		.data = 4 };
+		.data = 43 };
 	struct node fifth = {
 		.data = 5 };
 	
@@ -184,6 +192,6 @@ int main() {
 	INSERT_NODE(&first, &second);
 
 	traverse_graph_fwd(&first);
-	_wrap_data_ascii(&first);
+	__end_ncurses();
 	return 0;
 }
