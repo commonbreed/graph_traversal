@@ -40,10 +40,11 @@ static struct node *origin_node_d = 0;
 #include <locale.h>
 #include <wchar.h>
 #include <signal.h>
+#include <unistd.h>
 
 #include "litmus/litmus_unicode.h"
 #include "util/box_drawing.h"
-#include "ncurses_util/drawing.h"
+#include "util/drawing.h"
 
 struct node {
 	uint32_t data;
@@ -52,11 +53,25 @@ struct node {
 	int refc;
 };
 
-wchar_t *_wrap_data_ascii(struct node *n, int arrow);
+size_t _wrap_data_ascii(struct node *n, wchar_t *so, int arrow);
 
 void traverse_graph_fwd(struct node *start) {
-	do {
-		_wrap_data_ascii(start, (int)start->next);
+	do { 
+		wchar_t so[100] = {0}, *buffer;
+		size_t nlens;
+		nlens = _wrap_data_ascii(start, so, (int)start->next);
+		__before_place_next_node(nlens);
+
+		// Handle new-lines using __node_cr
+		wchar_t *token;
+		token = wcstok(so, L"\n", &buffer);
+		while(token != NULL) {
+			wprintf(L"%ls", token);
+			token = wcstok(NULL, L"\n", &buffer);
+			__node_cr(nlens);
+		}
+
+		wprintf(L"%ls", so);
 		start = start->next;
 	} while(start);
 	wprintf(L"\n");
@@ -134,14 +149,14 @@ char *_string_builder() {
 }
 
 // Wraps the data inside a node in an ASCII "circle"
-wchar_t *_wrap_data_ascii(struct node *n, int arrow) {
+size_t _wrap_data_ascii(struct node *n, wchar_t *so, int arrow) {
 	int cidx = 0;
 #define WINSERT(val) so[cidx] = val; cidx++
 #define WNFILL(val) for(int _i = 0; _i < nlens; _i++)\
 				so[cidx+_i] = val;\
 				cidx+=nlens
 #define WSTRINSERT() cidx+=swprintf(&so[cidx], nlens+1, L"%zu", (size_t)n->data)
-	wchar_t s[10], so[100] = {0};
+	wchar_t s[10];
 	swprintf(s, 10, L"%zu", (size_t)n->data);
 	size_t nlens = wcslen(s);
 	
@@ -166,8 +181,7 @@ wchar_t *_wrap_data_ascii(struct node *n, int arrow) {
 	WINSERT(GT_BD_BOTTOMRIGHT);
 
 //raise(SIGTRAP);
-	wprintf(L"%ls", so);
-	return so;
+	return nlens;
 }
 
 int main() {
@@ -192,6 +206,7 @@ int main() {
 	INSERT_NODE(&first, &second);
 
 	traverse_graph_fwd(&first);
+	sleep(5);
 	__end_ncurses();
 	return 0;
 }
