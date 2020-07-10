@@ -4,7 +4,6 @@ DEPS=util/drawing.h util/box_drawing.h
 OBJ=util/drawing.o main.o
 
 %.o: %.c $(DEPS)
-	rm $@ || true
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 main: $(OBJ)

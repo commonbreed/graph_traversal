@@ -1,4 +1,4 @@
-#include "ncurses_util/drawing.h"
+#include "util/drawing.h"
 
 #include <locale.h>
 #include <ncurses.h>
