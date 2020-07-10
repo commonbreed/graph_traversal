@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-I. -lncurses
-DEPS=ncurses_util/drawing.h util/box_drawing.h
-OBJ=ncurses_util/drawing.o main.o
+DEPS=util/drawing.h util/box_drawing.h
+OBJ=util/drawing.o main.o
 
 %.o: %.c $(DEPS)
 	rm $@ || true
