@@ -5,4 +5,4 @@
 - [ ] `libncurses-dev` - Used for the TUI environment.
 - [x] `bash` - A commonly-used shell.
 
-Those dependencies marked as [x] are hopefully only temporary, until better solutions can be found.
+Those dependencies marked as ☑️ are hopefully only temporary, until better solutions can be found.
